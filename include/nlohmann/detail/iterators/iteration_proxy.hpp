@@ -2,6 +2,7 @@
 
 #include <cstddef> // size_t
 #include <string> // string, to_string
+#include <iterator> // input_iterator_tag
 
 #include <nlohmann/detail/value_t.hpp>
 
@@ -16,6 +17,13 @@ template<typename IteratorType> class iteration_proxy
     /// helper class for iteration
     class iteration_proxy_internal
     {
+      public:
+        using difference_type = std::ptrdiff_t;
+        using value_type = iteration_proxy_internal;
+        using pointer = iteration_proxy_internal*;
+        using reference = iteration_proxy_internal&;
+        using iterator_category = std::input_iterator_tag;
+
       private:
         /// the iterator
         IteratorType anchor;
@@ -44,6 +52,12 @@ template<typename IteratorType> class iteration_proxy
             ++array_index;
 
             return *this;
+        }
+
+        /// equality operator (needed for InputIterator)
+        bool operator==(const iteration_proxy_internal& o) const noexcept
+        {
+            return anchor == o.anchor;
         }
 
         /// inequality operator (needed for range-based for)
@@ -107,5 +121,5 @@ template<typename IteratorType> class iteration_proxy
         return iteration_proxy_internal(container.end());
     }
 };
-}
-}
+}  // namespace detail
+}  // namespace nlohmann

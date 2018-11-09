@@ -12,6 +12,7 @@ SRCS = include/nlohmann/json.hpp \
        include/nlohmann/detail/input/json_sax.hpp \
        include/nlohmann/detail/input/lexer.hpp \
        include/nlohmann/detail/input/parser.hpp \
+       include/nlohmann/detail/input/position_t.hpp \
        include/nlohmann/detail/iterators/internal_iterator.hpp \
        include/nlohmann/detail/iterators/iter_impl.hpp \
        include/nlohmann/detail/iterators/iteration_proxy.hpp \
@@ -21,7 +22,10 @@ SRCS = include/nlohmann/json.hpp \
        include/nlohmann/detail/json_ref.hpp \
        include/nlohmann/detail/macro_scope.hpp \
        include/nlohmann/detail/macro_unscope.hpp \
-       include/nlohmann/detail/meta.hpp \
+       include/nlohmann/detail/meta/cpp_future.hpp \
+       include/nlohmann/detail/meta/detected.hpp \
+       include/nlohmann/detail/meta/type_traits.hpp \
+       include/nlohmann/detail/meta/void_t.hpp \
        include/nlohmann/detail/output/binary_writer.hpp \
        include/nlohmann/detail/output/output_adapters.hpp \
        include/nlohmann/detail/output/serializer.hpp \
@@ -44,6 +48,7 @@ all:
 	@echo "cppcheck - analyze code with cppcheck"
 	@echo "doctest - compile example files and check their output"
 	@echo "fuzz_testing - prepare fuzz testing of the JSON parser"
+	@echo "fuzz_testing_bson - prepare fuzz testing of the BSON parser"
 	@echo "fuzz_testing_cbor - prepare fuzz testing of the CBOR parser"
 	@echo "fuzz_testing_msgpack - prepare fuzz testing of the MessagePack parser"
 	@echo "fuzz_testing_ubjson - prepare fuzz testing of the UBJSON parser"
@@ -83,7 +88,7 @@ clean:
 
 coverage:
 	mkdir build_coverage
-	cd build_coverage ; CXX=g++-5 cmake .. -GNinja -DJSON_Coverage=ON -DJSON_MultipleHeaders=ON
+	cd build_coverage ; CXX=g++-7 cmake .. -GNinja -DJSON_Coverage=ON -DJSON_MultipleHeaders=ON
 	cd build_coverage ; ninja
 	cd build_coverage ; ctest -E '.*_default' -j10
 	cd build_coverage ; ninja lcov_html
@@ -188,7 +193,10 @@ pedantic_gcc:
 		-Wunused-macros \
 		-Wunused-parameter \
 		-Wuseless-cast \
-		-Wvariadic-macros"
+		-Wvariadic-macros \
+		-Wctor-dtor-privacy \
+		-Winit-self \
+		-Wstrict-null-sentinel"
 
 ##########################################################################
 # benchmarks
@@ -211,6 +219,14 @@ fuzz_testing:
 	$(MAKE) parse_afl_fuzzer -C test CXX=afl-clang++
 	mv test/parse_afl_fuzzer fuzz-testing/fuzzer
 	find test/data/json_tests -size -5k -name *json | xargs -I{} cp "{}" fuzz-testing/testcases
+	@echo "Execute: afl-fuzz -i fuzz-testing/testcases -o fuzz-testing/out fuzz-testing/fuzzer"
+
+fuzz_testing_bson:
+	rm -fr fuzz-testing
+	mkdir -p fuzz-testing fuzz-testing/testcases fuzz-testing/out
+	$(MAKE) parse_bson_fuzzer -C test CXX=afl-clang++
+	mv test/parse_bson_fuzzer fuzz-testing/fuzzer
+	find test/data -size -5k -name *.bson | xargs -I{} cp "{}" fuzz-testing/testcases
 	@echo "Execute: afl-fuzz -i fuzz-testing/testcases -o fuzz-testing/out fuzz-testing/fuzzer"
 
 fuzz_testing_cbor:
